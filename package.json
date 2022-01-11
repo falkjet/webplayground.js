@@ -5,11 +5,11 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "prepare": "npm run build",
     "build": "babel src --out-dir dist",
     "build:watch": "babel src --out-dir dist -w",
     "start": "NODE_ENV=production babel-node src/index.js",
-    "dev": "NODE_ENV=development nodemon -e js,jsx,ejs,mjs,cjs --exec babel-node bin/main.js"
+    "dev": "NODE_ENV=development nodemon -e js,jsx,ejs,mjs,cjs --exec babel-node bin/main.js",
+    "prepare": "npm run build"
   },
   "bin": {
     "webplayground.js": "./dist/bin/main.js"
