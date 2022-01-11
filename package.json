@@ -1,0 +1,46 @@
+{
+  "name": "webplayground.js",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "build": "babel src --out-dir dist",
+    "build:watch": "babel src --out-dir dist -w",
+    "start": "NODE_ENV=production babel-node src/index.js",
+    "dev": "NODE_ENV=development nodemon -e js,jsx,ejs,mjs,cjs --exec babel-node bin/main.js"
+  },
+  "bin": {
+    "webplayground.js": "./dist/bin/main.js"
+  },
+  "dependencies": {
+    "@babel/core": "^7.16.5",
+    "@babel/plugin-transform-react-jsx": "^7.16.0",
+    "@babel/preset-env": "^7.16.4",
+    "@babel/preset-react": "^7.16.0",
+    "@babel/register": "^7.16.5",
+    "babel-preset-react": "^6.24.1",
+    "chokidar": "^3.5.2",
+    "dotenv": "^10.0.0",
+    "ejs": "^3.1.6",
+    "koa": "^2.13.4",
+    "koa-bodyparser": "^4.3.0",
+    "koa-ejs": "^4.3.0",
+    "koa-logger": "^3.2.1",
+    "koa-router": "^10.1.1",
+    "koa-session": "^6.2.0",
+    "koa-static": "^5.0.0",
+    "mongodb": "^4.2.0",
+    "nodemon": "^2.0.15",
+    "pug": "^3.0.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-is": "^17.0.2",
+    "require-from-string": "^2.0.2",
+    "sass": "^1.44.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.16.8",
+    "@babel/node": "^7.16.8"
+  }
+}
