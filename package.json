@@ -12,7 +12,7 @@
     "prepare": "npm run build"
   },
   "bin": {
-    "webplayground.js": "./dist/bin/main.js"
+    "webplayground": "./dist/bin/main.js"
   },
   "dependencies": {
     "@babel/core": "^7.16.5",
