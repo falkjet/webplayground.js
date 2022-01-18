@@ -76,11 +76,10 @@ const registerDir = async (dir, router) => {
 };
 
 async function main() {
-  const mongo = new MongoClient(
-    process.env.MONGODB_URI || "mongodb://localhost"
-  );
-  await mongo.connect();
-  const mongodb = mongo.db();
+  const mongo =
+    process.env.MONGODB_URI && new MongoClient(process.env.MONGODB_URI);
+  if (mongo) await mongo.connect();
+  const mongodb = mongo && mongo.db();
 
   const app = new Koa();
   app.use((ctx, next) => {
@@ -98,16 +97,17 @@ async function main() {
   app.use(bodyparser());
   app.use(response.middleware);
   app.use(session({ db: mongodb, expirationTime: 60 * 60 * 24 * 7 }, app));
-  app.use(async (ctx, next) => {
-    ctx.user =
-      (ctx.session.uid &&
-        (await ctx.mongodb
-          .collection("users")
-          .findOne({ _id: new ObjectId(ctx.session.uid) }))) ||
-      undefined;
-    await next();
-    if (ctx.user) ctx.session.uid = ctx.user._id;
-  });
+  if (mongodb)
+    app.use(async (ctx, next) => {
+      ctx.user =
+        (ctx.session.uid &&
+          (await ctx.mongodb
+            .collection("users")
+            .findOne({ _id: new ObjectId(ctx.session.uid) }))) ||
+        undefined;
+      await next();
+      if (ctx.user) ctx.session.uid = ctx.user._id;
+    });
 
   const router = new Router();
   router.use(async (ctx, next) => {
