@@ -124,7 +124,7 @@ async function main() {
 
   const port = Number.parseInt(process.env.PORT) || 3000;
   await app.listen(port);
-  console.log(`listening on http://0.0.0.0:${port}/`);
+  console.log(`listening on http://localhost:${port}/`);
 }
 
 main().catch(console.error);
