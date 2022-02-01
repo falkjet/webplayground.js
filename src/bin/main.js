@@ -6,7 +6,6 @@ require("@babel/register")({
   ignore: [/node_modules/],
 });
 const Koa = require("koa");
-const serve = require("koa-static");
 const logger = require("koa-logger");
 const { resolve, join } = require("path");
 const response = require("../response");
@@ -14,7 +13,7 @@ const { MongoClient, ObjectId } = require("mongodb");
 const session = require("koa-session");
 const bodyparser = require("koa-bodyparser");
 const ejs = require("ejs");
-const { readdir, stat } = require("fs/promises");
+const { readdir, stat, readFile } = require("fs/promises");
 const elements = require("../elements");
 const Router = require("koa-router");
 const { renderToStaticMarkup } = require("react-dom/server");
@@ -45,6 +44,9 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
     let [path, extension] = file.split(/\.(?=[^.]+$)/);
     path = path === "index" ? "/" : `/${path}`;
     const filePath = join(dir, file);
+
+    const imgExtensions = ["jpeg", "jpg", "svg", "png", "webp", "ico"];
+    const extensions = ["js", "mjs", "cjs", "css", "html", ...imgExtensions];
     if (extension === "ejs") router.all(path, ejsHandler(filePath));
     else if (extension === "jsx") {
       const module = require(resolve(filePath));
@@ -57,6 +59,10 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
       if (module.all) subRouter.all("/", module.all);
 
       router.use(subRouter.routes());
+    } else if (extensions.includes(extension)) {
+      router.get(file, async ctx => {
+        ctx.body = await readFile(file)
+      })
     }
   };
 
@@ -86,9 +92,6 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
 
   if (Array.isArray(keys)) app.keys = keys;
   else app.keys = [keys];
-  const imgExtensions = ["jpeg", "jpg", "svg", "png", "webp", "ico"];
-  const extensions = ["js", "css", "html", ...imgExtensions];
-  app.use(serve(publicDir, { extensions }));
   app.use(logger());
   app.use(bodyparser());
   app.use(response.middleware);
