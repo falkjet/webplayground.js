@@ -20,17 +20,32 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const reactIs = require("react-is");
 const mapAsync = (array, func) => Promise.all(array.map(func));
 
-const createApp = async ({ publicDir, mongoURI, keys }) => {
-  const locals = async ctx => {
-    return {
-      redirect: path => {
-        throw new response.Redirect(path);
-      },
-      response,
-      ctx,
-      elements,
-    };
+const locals = async ctx => {
+  return {
+    redirect: path => {
+      throw new response.Redirect(path);
+    },
+    response,
+    ctx,
+    elements,
   };
+};
+
+const connectToMongoDB = async mongoURI => {
+  const mongoClient = mongoURI && new MongoClient(mongoURI);
+  if (mongoClient) await mongoClient.connect();
+  return mongoClient && mongoClient.db();
+}
+
+const reactMiddleware = async (ctx, next) => {
+  await next();
+  if (reactIs.isElement(ctx.body)) {
+    ctx.set("Content-Type", "text/html");
+    ctx.body = "<!DOCTYPE html>" + renderToStaticMarkup(ctx.body);
+  }
+}
+
+const createApp = async ({ publicDir, mongoURI, keys }) => {
 
   const ejsHandler = filePath => async ctx => {
     ctx.set("Content-Type", "text/html");
@@ -80,9 +95,7 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
     });
   };
 
-  const mongo = mongoURI && new MongoClient(mongoURI);
-  if (mongo) await mongo.connect();
-  const mongodb = mongo && mongo.db();
+  const mongodb = await connectToMongoDB(mongoURI)
 
   const app = new Koa();
   app.use((ctx, next) => {
@@ -95,8 +108,8 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
   app.use(logger());
   app.use(bodyparser());
   app.use(response.middleware);
-  app.use(session({ db: mongodb, expirationTime: 60 * 60 * 24 * 7 }, app));
-  if (mongodb)
+  if (mongodb) {
+    app.use(session({ db: mongodb, expirationTime: 60 * 60 * 24 * 7 }, app));
     app.use(async (ctx, next) => {
       ctx.user =
         (ctx.session.uid &&
@@ -107,15 +120,10 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
       await next();
       if (ctx.user) ctx.session.uid = ctx.user._id;
     });
+  }
 
   const router = new Router();
-  router.use(async (ctx, next) => {
-    await next();
-    if (reactIs.isElement(ctx.body)) {
-      ctx.set("Content-Type", "text/html");
-      ctx.body = "<!DOCTYPE html>" + renderToStaticMarkup(ctx.body);
-    }
-  });
+  router.use(reactMiddleware);
   await registerDir(publicDir, router);
   app.use(router.routes(), router.allowedMethods());
 
