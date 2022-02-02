@@ -35,7 +35,7 @@ const connectToMongoDB = async mongoURI => {
   const mongoClient = mongoURI && new MongoClient(mongoURI);
   if (mongoClient) await mongoClient.connect();
   return mongoClient && mongoClient.db();
-}
+};
 
 const reactMiddleware = async (ctx, next) => {
   await next();
@@ -43,10 +43,14 @@ const reactMiddleware = async (ctx, next) => {
     ctx.set("Content-Type", "text/html");
     ctx.body = "<!DOCTYPE html>" + renderToStaticMarkup(ctx.body);
   }
-}
+};
 
-const createApp = async ({ publicDir, mongoURI, keys }) => {
-
+const createApp = async ({
+  publicDir,
+  mongoURI,
+  keys,
+  staticFileExtensions,
+}) => {
   const ejsHandler = filePath => async ctx => {
     ctx.set("Content-Type", "text/html");
     const options = { root: resolve(publicDir), async: true };
@@ -60,24 +64,19 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
     path = path === "index" ? "/" : `/${path}`;
     const filePath = join(dir, file);
 
-    const imgExtensions = ["jpeg", "jpg", "svg", "png", "webp", "ico"];
-    const extensions = ["js", "mjs", "cjs", "css", "html", ...imgExtensions];
     if (extension === "ejs") router.all(path, ejsHandler(filePath));
     else if (extension === "jsx") {
       const module = require(resolve(filePath));
       const subRouter = new Router({ prefix: `${path}` });
-      if (module.get) subRouter.get("/", module.get);
-      if (module.post) subRouter.post("/", module.post);
-      if (module.put) subRouter.put("/", module.put);
-      if (module.patch) subRouter.patch("/", module.patch);
-      if (module.delete) subRouter.delete("/", module.delete);
-      if (module.all) subRouter.all("/", module.all);
+      ["get", "post", "put", "patch", "delete", "all"].forEach(
+        method => module[method] && subRouter[method]("/", module[method])
+      );
 
       router.use(subRouter.routes());
-    } else if (extensions.includes(extension)) {
+    } else if (staticFileExtensions.includes(extension)) {
       router.get(file, async ctx => {
-        ctx.body = await readFile(file)
-      })
+        ctx.body = await readFile(file);
+      });
     }
   };
 
@@ -95,7 +94,7 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
     });
   };
 
-  const mongodb = await connectToMongoDB(mongoURI)
+  const mongodb = await connectToMongoDB(mongoURI);
 
   const app = new Koa();
   app.use((ctx, next) => {
@@ -131,10 +130,12 @@ const createApp = async ({ publicDir, mongoURI, keys }) => {
 };
 
 async function main() {
+  const imgExtensions = ["jpeg", "jpg", "svg", "png", "webp", "ico"];
   const app = await createApp({
     publicDir: process.env.PUBLIC_DIR || "./public",
     mongoURI: process.env.MONGODB_URI,
     keys: process.env.KEYS.split(":"),
+    staticFileExtensions: ["js", "mjs", "cjs", "css", "html", ...imgExtensions],
   });
   const port = Number.parseInt(process.env.PORT) || 3000;
   await app.listen(port);
